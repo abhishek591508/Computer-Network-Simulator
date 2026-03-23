@@ -16,14 +16,17 @@ network_simulator/
 │
 ├── main.cpp
 │
-└── devices/
-    ├── Device.h
-    ├── Device.cpp
-    ├── EndDevice.h
-    ├── EndDevice.cpp
-    ├── Hub.h
-    └── Hub.cpp
-      
+├── devices/
+│   ├── Device.h
+│   ├── Device.cpp
+│   ├── EndDevice.h
+│   ├── EndDevice.cpp
+│   ├── Hub.h
+│   └── Hub.cpp
+│
+└── network/
+    ├── Frame.h
+    └── Frame.cpp   
 ```
 
 step-1
