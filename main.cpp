@@ -21,25 +21,65 @@
 //     return 0;
 // }
 
+
+
+
+//Step-2
+// #include "devices/EndDevice.h"
+// int main() {
+//     EndDevice A("A");
+//     EndDevice B("B");
+//     EndDevice C("C");
+
+//     // connections
+//     A.connect(&B);
+//     B.connect(&A);
+
+//     B.connect(&C);
+//     C.connect(&B);
+
+//     // test direct communication
+//     A.send("Hello B", &B);
+
+//     // test non-direct
+//     A.send("Hello C", &C);
+
+//     return 0;
+// }
+
+
+
+
+//step 3 
+//Create a star topology with five end devices connected to a hub and enable communication.
 #include "devices/EndDevice.h"
+#include "devices/Hub.h"
 
 int main() {
+
     EndDevice A("A");
     EndDevice B("B");
     EndDevice C("C");
+    EndDevice D("D");
 
-    // connections
-    A.connect(&B);
-    B.connect(&A);
+    Hub hub("H1");
 
-    B.connect(&C);
-    C.connect(&B);
+    // connect devices to hub
+    A.connect(&hub);
+    hub.connect(&A);
 
-    // test direct communication
-    A.send("Hello B", &B);
+    B.connect(&hub);
+    hub.connect(&B);
 
-    // test non-direct
-    A.send("Hello C", &C);
+    C.connect(&hub);
+    hub.connect(&C);
+
+    D.connect(&hub);
+    hub.connect(&D);
+
+    cout << "\n--- Star Topology Test ---\n\n";
+
+    A.send("Hello Everyone", &hub);
 
     return 0;
 }
