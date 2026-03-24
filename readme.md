@@ -51,6 +51,12 @@ Create a star topology with five end devices connected to a hub and enable commu
 
 
 
-step-4
+step-4(we did it in 4 parts 4.1 4.2 4.3 and 4.4)
 Here we start the work of Data link layer, Frame.h bnaya.
 isme hmne framing(srcMAC,destMAC,data) introduce kiya, sbhi devices(endDevice,hub) jo data ke sath kam kr rhe the unhe frame se replace kiya.
+
+
+
+step-5
+here we create switch.h & switch.cpp
+implement macTable display, macAddress learning, performing flooding for the first time and then Unicast forwarding then after.

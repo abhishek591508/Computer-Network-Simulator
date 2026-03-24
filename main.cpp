@@ -88,28 +88,82 @@
 
 
 //step 4
+// #include "devices/EndDevice.h"
+// #include "devices/Hub.h"
+// #include "devices/Switch.h"
+
+// int main() {
+
+//     EndDevice A("A", "MAC_A");
+//     EndDevice B("B", "MAC_B");
+//     EndDevice C("C", "MAC_C");
+
+//     Hub hub("H1");
+
+//     A.connect(&hub);
+//     hub.connect(&A);
+
+//     B.connect(&hub);
+//     hub.connect(&B);
+
+//     C.connect(&hub);
+//     hub.connect(&C);
+
+//     cout << "\n--- Frame Transmission Test ---\n\n";
+
+//     A.send("Hello B", "MAC_B");
+
+// }
+
+
+
+
+//step 5 will be to implement a simple CLI to allow users to create devices, connect them, and send messages interactively.
+// #include "devices/EndDevice.h"
+// #include "devices/Hub.h"
+// #include "devices/Switch.h"
+
+// int main() {
+
+//     EndDevice A("A", "MAC_A");
+//     EndDevice B("B", "MAC_B");
+//     EndDevice C("C", "MAC_C");
+
+
+//     Switch switch1("S1");
+//     switch1.connect(&A);
+//     switch1.connect(&B);
+//     switch1.connect(&C);
+//     A.connect(&switch1);
+//     B.connect(&switch1);
+//     C.connect(&switch1);
+
+
+//     //send frame through switch
+//     A.send("Hello B through Switch", "MAC_B");
+//     //b ko known hona chahiye ki A ne message bheja hai
+//     B.send("Hello A through Switch", "MAC_A");
+
+//     switch1.printMACTable();
+// }
+
+
+
+//step 6 will be to implement error detection using parity bits in the frame structure and simulate error scenarios.
 #include "devices/EndDevice.h"
 #include "devices/Hub.h"
+#include "devices/Switch.h"
 
 int main() {
 
     EndDevice A("A", "MAC_A");
     EndDevice B("B", "MAC_B");
-    EndDevice C("C", "MAC_C");
-
     Hub hub("H1");
-
     A.connect(&hub);
-    hub.connect(&A);
-
     B.connect(&hub);
+    hub.connect(&A);
     hub.connect(&B);
 
-    C.connect(&hub);
-    hub.connect(&C);
-
-    cout << "\n--- Frame Transmission Test ---\n\n";
-
-    A.send("Hello B", "MAC_B");
-
+    A.send("1011011","MAC_B");
+   
 }
