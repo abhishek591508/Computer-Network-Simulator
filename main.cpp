@@ -52,19 +52,53 @@
 
 //step 3 
 //Create a star topology with five end devices connected to a hub and enable communication.
+// #include "devices/EndDevice.h"
+// #include "devices/Hub.h"
+
+// int main() {
+
+//     EndDevice A("A");
+//     EndDevice B("B");
+//     EndDevice C("C");
+//     EndDevice D("D");
+
+//     Hub hub("H1");
+
+//     // connect devices to hub
+//     A.connect(&hub);
+//     hub.connect(&A);
+
+//     B.connect(&hub);
+//     hub.connect(&B);
+
+//     C.connect(&hub);
+//     hub.connect(&C);
+
+//     D.connect(&hub);
+//     hub.connect(&D);
+
+//     cout << "\n--- Star Topology Test ---\n\n";
+
+//     A.send("Hello Everyone", &hub);
+
+//     return 0;
+// }
+
+
+
+
+//step 4
 #include "devices/EndDevice.h"
 #include "devices/Hub.h"
 
 int main() {
 
-    EndDevice A("A");
-    EndDevice B("B");
-    EndDevice C("C");
-    EndDevice D("D");
+    EndDevice A("A", "MAC_A");
+    EndDevice B("B", "MAC_B");
+    EndDevice C("C", "MAC_C");
 
     Hub hub("H1");
 
-    // connect devices to hub
     A.connect(&hub);
     hub.connect(&A);
 
@@ -74,12 +108,8 @@ int main() {
     C.connect(&hub);
     hub.connect(&C);
 
-    D.connect(&hub);
-    hub.connect(&D);
+    cout << "\n--- Frame Transmission Test ---\n\n";
 
-    cout << "\n--- Star Topology Test ---\n\n";
+    A.send("Hello B", "MAC_B");
 
-    A.send("Hello Everyone", &hub);
-
-    return 0;
 }

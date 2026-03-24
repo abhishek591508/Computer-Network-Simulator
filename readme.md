@@ -26,7 +26,7 @@ network_simulator/
 │
 └── network/
     ├── Frame.h
-    └── Frame.cpp   
+    └── Frame.cpp      
 ```
 
 step-1
@@ -48,3 +48,9 @@ Star topology
 Broadcast transmission
 This satisfies part of the assignment requirement:
 Create a star topology with five end devices connected to a hub and enable communication.
+
+
+
+step-4
+Here we start the work of Data link layer, Frame.h bnaya.
+isme hmne framing(srcMAC,destMAC,data) introduce kiya, sbhi devices(endDevice,hub) jo data ke sath kam kr rhe the unhe frame se replace kiya.

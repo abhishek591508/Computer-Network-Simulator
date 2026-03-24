@@ -1,17 +1,45 @@
+// #ifndef ENDDEVICE_H
+// #define ENDDEVICE_H
+
+// #include "Device.h"
+
+// class EndDevice : public Device {
+// public:
+//     EndDevice(string id);
+
+//     // send to specific destination
+//     void send(const string& data, Device* destination);
+
+//     // override receive
+//     void receive(const string& data, Device* sender) override;
+// };
+
+// #endif
+
+
+
+//Commented above code in step 4
 #ifndef ENDDEVICE_H
 #define ENDDEVICE_H
 
 #include "Device.h"
 
 class EndDevice : public Device {
+
+private:
+    string macAddress;
+
 public:
-    EndDevice(string id);
+    EndDevice(string id, string mac);
 
-    // send to specific destination
-    void send(const string& data, Device* destination);
+    string getMAC();
 
-    // override receive
-    void receive(const string& data, Device* sender) override;
+    // send now uses destination MAC
+    void send(string data, string destMAC);
+
+    // UPDATED receive
+    void receive(Frame frame, Device* sender) override;
+
 };
 
 #endif
