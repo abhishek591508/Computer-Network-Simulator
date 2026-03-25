@@ -2,7 +2,8 @@ Important Design Choices (very important for future steps)
 
 for compiling :
 ```
- g++ main.cpp devices/Device.cpp devices/EndDevice.cpp devices/Hub.cpp devices/Switch.cpp network/Frame.h```
+g++ main.cpp devices/Device.cpp devices/EndDevice.cpp devices/Hub.cpp devices/Switch.cpp network/Frame.h network/AckBuffer.cpp network/Channel.cpp
+```
 for running :
 ```
 ./a 
@@ -21,9 +22,15 @@ network_simulator/
 │   ├── EndDevice.h
 │   ├── EndDevice.cpp
 │   ├── Hub.h
-│   └── Hub.cpp
+│   ├── Hub.cpp
+│   ├── Switch.h
+│   └── Switch.cpp
 │
 └── network/
+    ├── AckBuffer.h
+    ├── AckBuffer.cpp
+    ├── Channel.h
+    ├── Channel.cpp
     ├── Frame.h
     └── Frame.cpp      
 ```
