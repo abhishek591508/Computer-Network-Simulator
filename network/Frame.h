@@ -13,13 +13,17 @@ public:
     string destinationMAC;
     string payload;
     int parityBit;
+    int sequenceNumber; 
+    bool isACK; 
     
 
-    Frame(string src, string dest, string data)
+    Frame(string src, string dest, string data,int seq,bool ack=false)
     {
         sourceMAC = src;
         destinationMAC = dest;
         payload = data;
+        sequenceNumber = seq;
+        isACK = ack;
 
         // compute parity for error detection
         int ones = 0;

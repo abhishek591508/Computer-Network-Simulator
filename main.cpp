@@ -150,20 +150,160 @@
 
 
 //step 6 will be to implement error detection using parity bits in the frame structure and simulate error scenarios.
+// #include "devices/EndDevice.h"
+// #include "devices/Hub.h"
+// #include "devices/Switch.h"
+
+// int main() {
+
+//     EndDevice A("A", "MAC_A");
+//     EndDevice B("B", "MAC_B");
+//     Hub hub("H1");
+//     A.connect(&hub);
+//     B.connect(&hub);
+//     hub.connect(&A);
+//     hub.connect(&B);
+
+//     A.send("1011011","MAC_B");
+// }
+
+
+
+
+//step 7 will be to implement carrier sensing and collision detection 
+// #include "devices/EndDevice.h"
+// #include "devices/Hub.h"
+// #include "network/Channel.h"
+
+// int main() {
+
+//     EndDevice A("A","MAC_A");
+//     EndDevice B("B","MAC_B");
+
+//     Hub H1("H1");
+
+//     A.connect(&H1);
+//     H1.connect(&A);
+
+//     B.connect(&H1);
+//     H1.connect(&B);
+
+//     cout << "\n===== TEST 1 : Normal Transmission =====\n\n";
+
+//     Channel::busy = false;
+//     Channel::collision = false;
+
+//     A.send("101101","MAC_B");
+
+//     cout << "\n===== TEST 2 : Carrier Sense (Channel Busy) =====\n\n";
+
+//     Channel::busy = true;
+//     Channel::collision = false;
+
+//     A.send("101101","MAC_B");
+
+//     cout << "\n===== TEST 3 : Collision Detection =====\n\n";
+
+//     Channel::busy = false;
+//     Channel::collision = true;
+
+//     A.send("101101","MAC_B");
+
+//     return 0;
+// }
+
+
+
+
+
+//step 8 will be to implement a simple sliding window protocol for reliable data transfer between end devices, including ACKs and retransmissions.
+// #include "devices/EndDevice.h"
+// #include "devices/Hub.h"
+// #include "network/Channel.h"
+
+// int main() {
+
+//     EndDevice A("A","MAC_A");
+//     EndDevice B("B","MAC_B");
+
+//     Hub H1("H1");
+
+//     // create star topology
+//     A.connect(&H1);
+//     H1.connect(&A);
+
+//     B.connect(&H1);
+//     H1.connect(&B);
+
+//     cout << "\n===== Sliding Window Test =====\n\n";
+
+//     Channel::busy = false;
+//     Channel::collision = false;
+
+//     // send multiple frames
+//     A.send("101101","MAC_B");
+//     A.send("111000","MAC_B");
+//     A.send("110011","MAC_B");
+
+//     // window should now be full
+//     A.send("100111","MAC_B");
+//     A.send("110111","MAC_B");
+
+//     return 0;
+// }
+
+
+
+
+
+
+
 #include "devices/EndDevice.h"
 #include "devices/Hub.h"
-#include "devices/Switch.h"
+#include "network/Channel.h"
+#include "network/AckBuffer.h"
+
+void deliverACKs(Device* receiver) {
+
+    while(!AckBuffer::buffer.empty()) {
+
+        Frame ack = AckBuffer::buffer.front();
+        AckBuffer::buffer.pop();
+
+        receiver->receive(ack, receiver);
+    }
+}
 
 int main() {
 
-    EndDevice A("A", "MAC_A");
-    EndDevice B("B", "MAC_B");
-    Hub hub("H1");
-    A.connect(&hub);
-    B.connect(&hub);
-    hub.connect(&A);
-    hub.connect(&B);
+    EndDevice A("A","MAC_A");
+    EndDevice B("B","MAC_B");
 
-    A.send("1011011","MAC_B");
-   
+    Hub H1("H1");
+
+    A.connect(&H1);
+    H1.connect(&A);
+
+    B.connect(&H1);
+    H1.connect(&B);
+
+    Channel::busy = false;
+    Channel::collision = false;
+
+    cout << "\n===== Sliding Window Demonstration =====\n\n";
+
+    A.send("101101","MAC_B");
+    A.send("111000","MAC_B");
+    A.send("110011","MAC_B");
+
+    // window should now be full
+    A.send("100111","MAC_B");
+
+    cout << "\n--- Delivering ACKs ---\n\n";
+
+    deliverACKs(&A);
+
+    // now window slides
+    A.send("100111","MAC_B");
+
 }

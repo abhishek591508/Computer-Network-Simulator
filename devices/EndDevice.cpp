@@ -24,10 +24,20 @@
 
 // Commented above code in step 4
 #include "EndDevice.h"
+#include "../network/Channel.h"
+#include "../network/AckBuffer.h"
+#include <cstdlib>
+#include <windows.h>
+#include <iostream>
+using namespace std;
+// These are needed for: random delay & simulated waiting
 
 EndDevice::EndDevice(string id, string mac) : Device(id)
 {
     macAddress = mac;
+    nextSeq = 0;
+    base = 0;
+    windowSize = 3;
 }
 
 string EndDevice::getMAC()
@@ -35,55 +45,151 @@ string EndDevice::getMAC()
     return macAddress;
 }
 
+// void EndDevice::send(string data, string destMAC)
+// {
+
+//     // Create a frame
+//     Frame frame(macAddress, destMAC, data);
+
+//     cout << "[" << id << "] sending frame\n";
+//     cout << "SRC=" << frame.sourceMAC
+//          << " DEST=" << frame.destinationMAC
+//          << " DATA=" << frame.payload << endl;
+
+//     // send frame to connected devices
+//     for (auto device : connections)
+//     {
+//         device->receive(frame, this);
+//     }
+// }
+
+// update it in step-7 for carrier sensing and collision detection
 void EndDevice::send(string data, string destMAC)
 {
 
-    // Create a frame
-    Frame frame(macAddress, destMAC, data);
+    int attempts = 0;
 
-    cout << "[" << id << "] sending frame\n";
-    cout << "SRC=" << frame.sourceMAC
-         << " DEST=" << frame.destinationMAC
-         << " DATA=" << frame.payload << endl;
-
-    // send frame to connected devices
-    for (auto device : connections)
+    while (attempts < 3)
     {
-        device->receive(frame, this);
+
+        // Sliding Window Check
+        if (nextSeq >= base + windowSize)
+        {
+            cout << "[" << id << "] window full, waiting for ACK\n";
+            return;
+        }
+
+        // Carrier Sense
+        if (Channel::busy)
+        {
+            cout << "[" << id << "] channel busy, waiting...\n";
+            return;
+        }
+        Channel::busy = true;
+
+        Frame frame(macAddress, destMAC, data, nextSeq);
+
+        cout << "[" << id << "] sending frame\n";
+        cout << "SEQ=" << frame.sequenceNumber
+             << " SRC=" << frame.sourceMAC
+             << " DEST=" << frame.destinationMAC
+             << " DATA=" << frame.payload << endl;
+
+        nextSeq++;
+
+        // simulate collision condition
+        if (Channel::collision)
+        {
+
+            cout << "[" << id << "] collision detected\n";
+            Channel::busy = false;
+            // Channel::collision = false; // reset collision for next attempt
+
+            // random backoff
+            int delay = rand() % 3 + 1;
+            cout << "[" << id << "] backing off for "
+                 << delay << " seconds\n";
+
+            Sleep(delay * 1000);
+
+            attempts++;
+            continue;
+        }
+        // normal transmission
+        for (auto device : connections)
+        {
+            device->receive(frame, this);
+        }
+        Channel::busy = false;
+        return;
     }
+    cout << "[" << id << "] transmission failed after retries\n";
 }
 
+void EndDevice::receive(Frame frame, Device *sender)
+{
 
-
-void EndDevice::receive(Frame frame, Device* sender) {
-
-    // Step 1: Check if frame is intended for this device
-    if (frame.destinationMAC != macAddress) {
+    // ignore frames not meant for this device
+    if (frame.destinationMAC != macAddress)
+    {
         cout << "[" << id << "] Silently ignoring frame\n";
         return;
     }
 
-    cout << "[" << id << "] received frame from "
+    // handle ACK frames
+    if (frame.isACK)
+    {
+
+        cout << "[" << id << "] received ACK for SEQ="
+             << frame.sequenceNumber << endl;
+
+        base = frame.sequenceNumber + 1;
+
+        cout << "[" << id << "] window slides, new base = "
+             << base << endl;
+
+        return;
+    }
+
+    cout << "[" << id << "] received frame SEQ="
+         << frame.sequenceNumber << " from "
          << sender->getId() << endl;
 
-    // Step 2: Recalculate parity
+    // parity check
     int ones = 0;
 
-    for(char c : frame.payload) {
-        if(c == '1') ones++;
+    for (char c : frame.payload)
+    {
+        if (c == '1')
+            ones++;
     }
 
     int computedParity = ones % 2;
 
-    // Step 3: Compare parity
-    if(computedParity != frame.parityBit) {
+    if (computedParity != frame.parityBit)
+    {
 
         cout << "[ERROR] Frame corrupted during transmission\n";
         return;
-
     }
 
     cout << "[SUCCESS] Frame received correctly\n";
     cout << "Payload: " << frame.payload << endl;
 
+    // create ACK
+    // Frame ack(macAddress, frame.sourceMAC, "", frame.sequenceNumber, true);
+
+    // cout << "[" << id << "] sending ACK "
+    //      << frame.sequenceNumber << endl;
+
+    // for(auto device : connections) {
+    //     device->receive(ack, this);
+    // }
+
+    Frame ack(macAddress, frame.sourceMAC, "", frame.sequenceNumber, true);
+
+    cout << "[" << id << "] generating ACK "
+         << frame.sequenceNumber << endl;
+
+    AckBuffer::buffer.push(ack);
 }

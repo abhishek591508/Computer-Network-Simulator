@@ -28,6 +28,9 @@ class EndDevice : public Device {
 
 private:
     string macAddress;
+    int nextSeq;
+    int base;         // start of window
+    int windowSize;   // window size
 
 public:
     EndDevice(string id, string mac);

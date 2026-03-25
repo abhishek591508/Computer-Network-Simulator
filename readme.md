@@ -2,8 +2,7 @@ Important Design Choices (very important for future steps)
 
 for compiling :
 ```
-g++ main.cpp devices/Device.cpp devices/EndDevice.cpp devices/Hub.cpp
-```
+ g++ main.cpp devices/Device.cpp devices/EndDevice.cpp devices/Hub.cpp devices/Switch.cpp network/Frame.h```
 for running :
 ```
 ./a 
@@ -60,3 +59,18 @@ isme hmne framing(srcMAC,destMAC,data) introduce kiya, sbhi devices(endDevice,hu
 step-5
 here we create switch.h & switch.cpp
 implement macTable display, macAddress learning, performing flooding for the first time and then Unicast forwarding then after.
+
+//step 6 will be to implement error detection using parity bits in the frame structure and simulate error scenarios.
+
+
+
+//step-7
+we modify EndDevice::send() so the device:
+Detects collision
+Stops transmission
+Waits a random time
+Retries sending
+
+
+
+//step 8 will be to implement a simple sliding window protocol for reliable data transfer between end devices, including ACKs and retransmissions.
