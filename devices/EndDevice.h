@@ -1,48 +1,52 @@
-// #ifndef ENDDEVICE_H
-// #define ENDDEVICE_H
-
-// #include "Device.h"
-
-// class EndDevice : public Device {
-// public:
-//     EndDevice(string id);
-
-//     // send to specific destination
-//     void send(const string& data, Device* destination);
-
-//     // override receive
-//     void receive(const string& data, Device* sender) override;
-// };
-
-// #endif
-
-
-
-//Commented above code in step 4
 #ifndef ENDDEVICE_H
 #define ENDDEVICE_H
 
 #include "Device.h"
 
-class EndDevice : public Device {
+enum class ReliableProtocol
+{
+    GBN,
+    SelectiveRepeat
+};
+
+class EndDevice : public Device
+{
 
 private:
     string macAddress;
+    ReliableProtocol protocol;
     int nextSeq;
-    int base;         // start of window
-    int windowSize;   // window size
+    int base;
+    int windowSize;
+
+    // GBN receiver
+    int expectedSeq;
+
+    // Selective Repeat receiver
+    int rcv_base;
+    vector<bool> sr_recvFilled;
+    vector<string> sr_recvPayload;
+
+    // Selective Repeat sender: per-sequence ACK received
+    vector<bool> sr_acked;
 
 public:
-    EndDevice(string id, string mac);
+    static const int SEQ_MOD = 8;
+
+    EndDevice(string id, string mac,
+              ReliableProtocol p = ReliableProtocol::GBN);
 
     string getMAC();
 
-    // send now uses destination MAC
+    ReliableProtocol getProtocol() const { return protocol; }
+
+    void setProtocol(ReliableProtocol p);
+
+    void setWindowSize(int w);
+
     void send(string data, string destMAC);
 
-    // UPDATED receive
-    void receive(Frame frame, Device* sender) override;
-
+    void receive(Frame frame, Device *sender) override;
 };
 
 #endif

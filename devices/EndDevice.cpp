@@ -1,85 +1,88 @@
-// #include "EndDevice.h"
-
-// EndDevice::EndDevice(string id) : Device(id) {}
-
-// void EndDevice::send(const string& data, Device* destination) {
-//     cout << "[" << id << "] Sending data to ["
-//          << destination->getId() << "]: " << data << endl;
-
-//     // send only to directly connected device (for now)
-//     for (auto device : connections) {
-//         if (device == destination) {
-//             device->receive(data, this);
-//             return;
-//         }
-//     }
-
-//     cout << "[" << id << "] can not send the data to "<<"["<<destination->getId()<<"] because they are not directly connected.";
-// }
-
-// void EndDevice::receive(const string& data, Device* sender) {
-//     cout << "[" << id << "] Received data from ["
-//          << sender->getId() << "]: " << data << endl;
-// }
-
-// Commented above code in step 4
 #include "EndDevice.h"
 #include "../network/Channel.h"
 #include "../network/AckBuffer.h"
+#include "../network/Crc.h"
 #include <cstdlib>
-#include <windows.h>
 #include <iostream>
-using namespace std;
-// These are needed for: random delay & simulated waiting
+#include <windows.h>
 
-EndDevice::EndDevice(string id, string mac) : Device(id)
+using namespace std;
+
+namespace
+{
+
+int mod(int n, int m)
+{
+    return ((n % m) + m) % m;
+}
+
+bool inRecvWindow(int seq, int winBase, int winSize, int modN)
+{
+    for (int i = 0; i < winSize; ++i)
+    {
+        if (mod(winBase + i, modN) == mod(seq, modN))
+            return true;
+    }
+    return false;
+}
+
+bool seqInUnacked(int ack, int base, int nextSeq, int modN)
+{
+    int n = mod(nextSeq - base, modN);
+    for (int i = 0; i < n; ++i)
+    {
+        if (mod(base + i, modN) == mod(ack, modN))
+            return true;
+    }
+    return false;
+}
+
+} // namespace
+
+EndDevice::EndDevice(string id, string mac, ReliableProtocol p) : Device(id)
 {
     macAddress = mac;
+    protocol = p;
     nextSeq = 0;
     base = 0;
     windowSize = 3;
+    expectedSeq = 0;
+    rcv_base = 0;
+    sr_recvFilled.assign(SEQ_MOD, false);
+    sr_recvPayload.assign(SEQ_MOD, "");
+    sr_acked.assign(SEQ_MOD, false);
 }
 
-string EndDevice::getMAC()
+void EndDevice::setProtocol(ReliableProtocol p)
 {
-    return macAddress;
+    protocol = p;
+    nextSeq = 0;
+    base = 0;
+    expectedSeq = 0;
+    rcv_base = 0;
+    fill(sr_recvFilled.begin(), sr_recvFilled.end(), false);
+    sr_recvPayload.assign(SEQ_MOD, "");
+    fill(sr_acked.begin(), sr_acked.end(), false);
 }
 
-// void EndDevice::send(string data, string destMAC)
-// {
+void EndDevice::setWindowSize(int w)
+{
+    if (w > 0 && w * 2 <= SEQ_MOD)
+        windowSize = w;
+}
 
-//     // Create a frame
-//     Frame frame(macAddress, destMAC, data);
-
-//     cout << "[" << id << "] sending frame\n";
-//     cout << "SRC=" << frame.sourceMAC
-//          << " DEST=" << frame.destinationMAC
-//          << " DATA=" << frame.payload << endl;
-
-//     // send frame to connected devices
-//     for (auto device : connections)
-//     {
-//         device->receive(frame, this);
-//     }
-// }
-
-// update it in step-7 for carrier sensing and collision detection
 void EndDevice::send(string data, string destMAC)
 {
+    int pending = mod(nextSeq - base, SEQ_MOD);
+    if (pending >= windowSize)
+    {
+        cout << "[" << id << "] window full, waiting for ACK\n";
+        return;
+    }
 
     int attempts = 0;
-
     while (attempts < 3)
     {
-
-        // Sliding Window Check
-        if (nextSeq >= base + windowSize)
-        {
-            cout << "[" << id << "] window full, waiting for ACK\n";
-            return;
-        }
-
-        // Carrier Sense
         if (Channel::busy)
         {
             cout << "[" << id << "] channel busy, waiting...\n";
@@ -87,40 +90,33 @@ void EndDevice::send(string data, string destMAC)
         }
         Channel::busy = true;
 
-        Frame frame(macAddress, destMAC, data, nextSeq);
+        int seq = nextSeq;
+        Frame frame(macAddress, destMAC, data, seq, false);
 
         cout << "[" << id << "] sending frame\n";
         cout << "SEQ=" << frame.sequenceNumber
              << " SRC=" << frame.sourceMAC
              << " DEST=" << frame.destinationMAC
-             << " DATA=" << frame.payload << endl;
+             << " DATA=" << frame.payload
+             << " CRC=" << frame.crc << endl;
 
-        nextSeq++;
-
-        // simulate collision condition
         if (Channel::collision)
         {
-
             cout << "[" << id << "] collision detected\n";
             Channel::busy = false;
-            // Channel::collision = false; // reset collision for next attempt
-
-            // random backoff
             int delay = rand() % 3 + 1;
-            cout << "[" << id << "] backing off for "
-                 << delay << " seconds\n";
-
+            cout << "[" << id << "] backing off for " << delay << " seconds\n";
             Sleep(delay * 1000);
-
             attempts++;
             continue;
         }
-        // normal transmission
+
         for (auto device : connections)
         {
             device->receive(frame, this);
         }
         Channel::busy = false;
+        nextSeq = mod(nextSeq + 1, SEQ_MOD);
         return;
     }
     cout << "[" << id << "] transmission failed after retries\n";
@@ -128,68 +124,109 @@ void EndDevice::send(string data, string destMAC)
 
 void EndDevice::receive(Frame frame, Device *sender)
 {
-
-    // ignore frames not meant for this device
     if (frame.destinationMAC != macAddress)
     {
         cout << "[" << id << "] Silently ignoring frame\n";
         return;
     }
 
-    // handle ACK frames
     if (frame.isACK)
     {
+        int ack = mod(frame.sequenceNumber, SEQ_MOD);
 
-        cout << "[" << id << "] received ACK for SEQ="
-             << frame.sequenceNumber << endl;
+        if (protocol == ReliableProtocol::GBN)
+        {
+            if (!seqInUnacked(ack, base, nextSeq, SEQ_MOD))
+            {
+                cout << "[" << id << "] ignoring stale/invalid cumulative ACK SEQ="
+                     << ack << endl;
+                return;
+            }
+            base = mod(ack + 1, SEQ_MOD);
+            cout << "[" << id << "] GBN: cumulative ACK through SEQ=" << ack
+                 << ", new base=" << base << endl;
+            return;
+        }
 
-        base = frame.sequenceNumber + 1;
-
-        cout << "[" << id << "] window slides, new base = "
-             << base << endl;
-
+        sr_acked[ack] = true;
+        while (sr_acked[base])
+        {
+            sr_acked[base] = false;
+            base = mod(base + 1, SEQ_MOD);
+        }
+        cout << "[" << id << "] SR: selective ACK for SEQ=" << ack
+             << ", new base=" << base << endl;
         return;
     }
 
-    cout << "[" << id << "] received frame SEQ="
-         << frame.sequenceNumber << " from "
+    if (!crc16_verify(frame.payload, frame.crc))
+    {
+        cout << "[ERROR] CRC mismatch — frame discarded\n";
+        return;
+    }
+
+    int seq = mod(frame.sequenceNumber, SEQ_MOD);
+
+    if (protocol == ReliableProtocol::GBN)
+    {
+        cout << "[" << id << "] GBN received frame SEQ=" << seq << " from "
+             << sender->getId() << endl;
+
+        if (seq != expectedSeq)
+        {
+            cout << "[" << id << "] GBN: out-of-order (expected " << expectedSeq
+                 << "), discarding\n";
+            if (expectedSeq != 0)
+            {
+                int dup = mod(expectedSeq - 1, SEQ_MOD);
+                Frame dupAck(macAddress, frame.sourceMAC, "", dup, true);
+                cout << "[" << id << "] re-sending duplicate cumulative ACK SEQ="
+                     << dup << endl;
+                AckBuffer::buffer.push(dupAck);
+            }
+            return;
+        }
+
+        cout << "[SUCCESS] Frame received correctly\n";
+        cout << "Payload: " << frame.payload << endl;
+
+        Frame ack(macAddress, frame.sourceMAC, "", seq, true);
+        cout << "[" << id << "] GBN: ACK (cumulative through SEQ=" << seq << ")\n";
+        AckBuffer::buffer.push(ack);
+        expectedSeq = mod(expectedSeq + 1, SEQ_MOD);
+        return;
+    }
+
+    cout << "[" << id << "] SR received frame SEQ=" << seq << " from "
          << sender->getId() << endl;
 
-    // parity check
-    int ones = 0;
-
-    for (char c : frame.payload)
+    if (!inRecvWindow(seq, rcv_base, windowSize, SEQ_MOD))
     {
-        if (c == '1')
-            ones++;
-    }
-
-    int computedParity = ones % 2;
-
-    if (computedParity != frame.parityBit)
-    {
-
-        cout << "[ERROR] Frame corrupted during transmission\n";
+        cout << "[" << id << "] SR: SEQ outside receive window, discarding\n";
         return;
     }
 
-    cout << "[SUCCESS] Frame received correctly\n";
-    cout << "Payload: " << frame.payload << endl;
+    if (sr_recvFilled[seq])
+    {
+        Frame ack(macAddress, frame.sourceMAC, "", seq, true);
+        cout << "[" << id << "] SR: duplicate frame, re-ACK SEQ=" << seq << endl;
+        AckBuffer::buffer.push(ack);
+        return;
+    }
 
-    // create ACK
-    // Frame ack(macAddress, frame.sourceMAC, "", frame.sequenceNumber, true);
+    sr_recvPayload[seq] = frame.payload;
+    sr_recvFilled[seq] = true;
 
-    // cout << "[" << id << "] sending ACK "
-    //      << frame.sequenceNumber << endl;
-
-    // for(auto device : connections) {
-    //     device->receive(ack, this);
-    // }
-
-    Frame ack(macAddress, frame.sourceMAC, "", frame.sequenceNumber, true);
-
-    cout << "[" << id << "] generating ACK "
-         << frame.sequenceNumber << endl;
-
+    Frame ack(macAddress, frame.sourceMAC, "", seq, true);
+    cout << "[" << id << "] SR: selective ACK SEQ=" << seq << endl;
     AckBuffer::buffer.push(ack);
+
+    while (sr_recvFilled[rcv_base])
+    {
+        cout << "[SUCCESS] SR delivering in-order SEQ=" << rcv_base << "\n";
+        cout << "Payload: " << sr_recvPayload[rcv_base] << endl;
+        sr_recvFilled[rcv_base] = false;
+        sr_recvPayload[rcv_base].clear();
+        rcv_base = mod(rcv_base + 1, SEQ_MOD);
+    }
 }
