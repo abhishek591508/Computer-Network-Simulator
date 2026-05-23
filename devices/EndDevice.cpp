@@ -2,9 +2,14 @@
 #include "../network/Channel.h"
 #include "../network/AckBuffer.h"
 #include "../network/Crc.h"
+#include "../application/AppLayer.h"
 #include <cstdlib>
 #include <iostream>
+#ifdef _WIN32
 #include <windows.h>
+#else
+#include <unistd.h>
+#endif
 
 using namespace std;
 
@@ -39,9 +44,10 @@ bool seqInUnacked(int ack, int base, int nextSeq, int modN)
 
 } // namespace
 
-EndDevice::EndDevice(string id, string mac, ReliableProtocol p) : Device(id)
+EndDevice::EndDevice(string id, string mac, string ip, ReliableProtocol p) : Device(id)
 {
     macAddress = mac;
+    ipAddress = ip;
     protocol = p;
     nextSeq = 0;
     base = 0;
@@ -69,6 +75,21 @@ void EndDevice::setWindowSize(int w)
 {
     if (w > 0 && w * 2 <= SEQ_MOD)
         windowSize = w;
+}
+
+string EndDevice::getMAC() { return macAddress; }
+
+string EndDevice::getIP() { return ipAddress; }
+
+void EndDevice::setIP(string cidr) { ipAddress = cidr; }
+
+ARPTable &EndDevice::getARPTable() { return arpTable; }
+
+PortTable &EndDevice::getPortTable() { return portTable; }
+
+void EndDevice::bindPort(int port, string processName, bool wellKnown)
+{
+    portTable.bindPort(port, processName, wellKnown);
 }
 
 void EndDevice::send(string data, string destMAC)
@@ -106,7 +127,11 @@ void EndDevice::send(string data, string destMAC)
             Channel::busy = false;
             int delay = rand() % 3 + 1;
             cout << "[" << id << "] backing off for " << delay << " seconds\n";
+#ifdef _WIN32
             Sleep(delay * 1000);
+#else
+            sleep(delay);
+#endif
             attempts++;
             continue;
         }
@@ -189,6 +214,12 @@ void EndDevice::receive(Frame frame, Device *sender)
 
         cout << "[SUCCESS] Frame received correctly\n";
         cout << "Payload: " << frame.payload << endl;
+
+        // if upper layer data present, show application handling
+        if (frame.payload.find("HTTP") != string::npos)
+            appHTTP_Server(frame.payload);
+        if (frame.payload.find("DNS") != string::npos)
+            appDNS_Reply("host", getIP());
 
         Frame ack(macAddress, frame.sourceMAC, "", seq, true);
         cout << "[" << id << "] GBN: ACK (cumulative through SEQ=" << seq << ")\n";

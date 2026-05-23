@@ -1,83 +1,48 @@
-Important Design Choices (very important for future steps)
+# ITL351 Computer Network Simulator
 
-for compiling :
-```
-g++ main.cpp devices/Device.cpp devices/EndDevice.cpp devices/Hub.cpp devices/Switch.cpp network/Frame.h network/AckBuffer.cpp network/Channel.cpp
-```
-for running :
-```
-./a 
-```
+Semester project — full protocol stack simulator (C++).
 
-
+## Project structure
 
 ```
-network_simulator/
-│
+Computer-Network-Simulator/
 ├── main.cpp
-│
-├── devices/
-│   ├── Device.h
-│   ├── Device.cpp
-│   ├── EndDevice.h
-│   ├── EndDevice.cpp
-│   ├── Hub.h
-│   ├── Hub.cpp
-│   ├── Switch.h
-│   └── Switch.cpp
-│
-└── network/
-    ├── AckBuffer.h
-    ├── AckBuffer.cpp
-    ├── Channel.h
-    ├── Channel.cpp
-    ├── Frame.h
-    └── Frame.cpp      
+├── build.bat
+├── SPECIFICATION.md
+├── devices/       Device, EndDevice, Hub, Switch, Bridge, Router
+├── network/       Frame, Channel, CRC, IPv4, ARP, RoutingTable, RoutingProtocols
+├── transport/     Ports, TCP/UDP segments
+├── application/   HTTP, DNS
+└── simulator/     Tests, domain analysis, full stack send
 ```
 
-step-1
-isme hmne device.cpp & device.h build kiye & fir main.cpp me testing kr li.Right now your base Device is doing blind broadcasting (sending to all connections).That’s not realistic. In real networks:
-we'll improve it in next step-2.
+## Build and run (Windows)
 
+```bat
+cd Computer-Network-Simulator
+build.bat
+network_sim.exe
+```
 
+## What runs
 
-step-2
-isme hmne endDevice.h & endDevice.cpp bnaya, isme device can send data to specific device & can detect invalid path
+`main.cpp` calls `runAllTests()` which runs **all submission test cases** in order:
 
+1. Point-to-point
+2. Star topology (5 hosts + hub)
+3. Bridge + Switch + CRC
+4. DL Test Case 1 (switch + 5 hosts + domains)
+5. DL Test Case 2 (2 hubs + switch + 10 hosts + domains)
+6. CSMA/CD access control
+7. Selective Repeat flow control
+8. Network layer (router, ARP, static + RIP/OSPF/BGP/EIGRP)
+9. Full stack HTTP (TCP)
+10. Full stack DNS (UDP)
 
-step-3
-isme hamne hub.cpp and hub.h banaya.
-You now have a working Physical Layer Simulation supporting:
-End devices
-Hub
-Star topology
-Broadcast transmission
-This satisfies part of the assignment requirement:
-Create a star topology with five end devices connected to a hub and enable communication.
+## Design notes
 
+- **Frames** carry data at Layer 2; **IPv4/ports** logged at upper layers.
+- **ACKs** use `AckBuffer` and `deliverACKs()` like earlier steps.
+- **Routing protocols** are simplified educational simulations that update the routing table and print logs.
 
-
-step-4(we did it in 4 parts 4.1 4.2 4.3 and 4.4)
-Here we start the work of Data link layer, Frame.h bnaya.
-isme hmne framing(srcMAC,destMAC,data) introduce kiya, sbhi devices(endDevice,hub) jo data ke sath kam kr rhe the unhe frame se replace kiya.
-
-
-
-step-5
-here we create switch.h & switch.cpp
-implement macTable display, macAddress learning, performing flooding for the first time and then Unicast forwarding then after.
-
-//step 6 will be to implement error detection using parity bits in the frame structure and simulate error scenarios.
-
-
-
-//step-7
-we modify EndDevice::send() so the device:
-Detects collision
-Stops transmission
-Waits a random time
-Retries sending
-
-
-
-//step 8 will be to implement a simple sliding window protocol for reliable data transfer between end devices, including ACKs and retransmissions.
+See `SPECIFICATION.md` for mapping to assignment deliverables.
