@@ -18,10 +18,10 @@ Computer-Network-Simulator/
 
 ## Build and run (Windows)
 
-```bat
+```
 cd Computer-Network-Simulator
-build.bat
-network_sim.exe
+./build.bat
+./network_sim.exe
 ```
 
 ## What runs

@@ -1,3 +1,7 @@
+// encryption technique of msg to a number
+// same string → same CRC number will be generated
+// tiny string change → very different CRC number
+
 #include "Crc.h"
 
 uint16_t crc16_ccitt(const std::string &payload)

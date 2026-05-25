@@ -175,6 +175,45 @@ static void testNetworkLayer()
 
     resetChannel();
 
+
+    Router R1("R1");
+    Router R2("R2");
+    Router R3("R3");
+
+    Switch s1("s1");
+    Switch s2("s2");
+
+    EndDevice M("M", "MAC_M", "192.168.1.10/24");
+    EndDevice N("N", "MAC_N", "192.168.2.10/24");
+    EndDevice O("O", "MAC_O", "192.168.2.10/24");
+    EndDevice P("P", "MAC_P", "192.168.2.10/24");
+
+    
+    linkDevices(&R1, &R2);
+    linkDevices(&R2, &R3);
+    linkDevices(&R3, &R1);
+
+    linkDevices(&R2, &s1);
+    linkDevices(&R3, &s2);
+
+    linkDevices(&s1, &M);
+    linkDevices(&s1, &N);
+    linkDevices(&s2, &O);
+    linkDevices(&s2, &P);
+
+    
+
+    
+
+
+
+
+
+
+
+
+    
+
     Router R1("R1");
     EndDevice A("A", "MAC_A", "192.168.1.10/24");
     EndDevice B("B", "MAC_B", "192.168.2.10/24");
